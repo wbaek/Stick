@@ -26,6 +26,7 @@
 *.exe
 *.out
 *.app
+*.e
 
 # ignore data folder
 data/

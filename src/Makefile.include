@@ -1,0 +1,66 @@
+PROJECT_NAME=esm_tracking
+PRODUCT_NAME=$(PROJECT_NAME)
+
+OS = $(shell uname -s 2>/dev/null | tr "[:upper:]" "[:lower:]")
+OS_SIZE = $(shell uname -m | sed -e "s/i.86/32/" -e "s/x86_64/64/" -e "s/armv7l/32/")
+OS_ARCH = $(shell uname -m | sed -e "s/i386/i686/")
+
+#http://blog.jgc.org/2011/07/gnu-make-recursive-wildcard-function.html
+rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
+
+GCC=g++
+
+CCFLAGS := -m$(OS_SIZE) -O2
+LDFLAGS := 
+INCLUDE := -I../include 
+LIB_PATH := 
+DYNAMIC_LIBS := 
+DEFINE_FLAGS := -D__PROJECT_NAME__=\"$(PROJECT_NAME)\"
+
+BASE_PATH = $(dir $(shell pwd))
+DEPENDENCY_PATH = $(BASE_PATH)/dependency/
+
+ENABLE_OPENMP=true
+ENABLE_SIMD=false
+ENABLE_AVX=false
+ifeq ($(OS), darwin)
+	PRODUCT_NAME := ${PRODUCT_NAME:%=%_mac}
+	DYNAMIC_LIBS += -liconv
+	DEFINE_FLAGS += -D__MAC__
+	ENABLE_OPENMP=false
+	ENABLE_SIMD=false
+	ENABLE_AVX=false
+else
+	PRODUCT_NAME := ${PRODUCT_NAME:%=%_linux}
+	DEFINE_FLAGS += -D__LINUX__
+endif
+
+ifeq ($(ENABLE_OPENMP), true)
+	CCFLAGS += -fopenmp
+	LDFLAGS += -lgomp
+	PRODUCT_NAME := ${PRODUCT_NAME:%=%_openmp}
+endif
+
+ifeq ($(ENABLE_SIMD), true)
+	DEFINE_FLAGS += -D__USE_SIMD__
+	CCFLAGS += -msse4.2
+	PRODUCT_NAME := ${PRODUCT_NAME:%=%_simd}
+endif
+
+ifeq ($(ENABLE_AVX), true)
+	DEFINE_FLAGS += -D__USE_AVX__
+	CCFLAGS += -mavx
+	PRODUCT_NAME := ${PRODUCT_NAME:%=%_avx}
+endif
+
+%.o : %.cpp
+	$(GCC) $(CCFLAGS) $(INCLUDE) $(DEFINE_FLAGS) -c $< -o $@
+
+print_environments:
+	@printf "\033[0;33m===== Makefile Environts Setup =====\033[0m\n"
+	@printf "\033[0;33m= ENABLE_OPENMP = $(ENABLE_OPENMP)  \033[0m\n"
+	@printf "\033[0;33m= ENABLE_SIMD   = $(ENABLE_SIMD)    \033[0m\n"
+	@printf "\033[0;33m= ENABLE_AVX    = $(ENABLE_AVX)     \033[0m\n"
+	@printf "\033[0;33m====================================\033[0m\n"
+
+
