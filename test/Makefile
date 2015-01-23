@@ -4,9 +4,15 @@ GTEST_PATH=$(DEPENDENCY_PATH)/gtest/
 INCLUDE += -isystem $(GTEST_PATH)/include/ \
 		   -I./
 
+ifeq ($(TRAVIS), true)
+STATIC_LIBS = ../src/lib$(PRODUCT_NAME).a
+LIB_PATH += -L/usr/local/lib
+DYNAMIC_LIBS += -lgtest -lpthread
+else
 STATIC_LIBS +=\
 			  $(GTEST_PATH)/lib/.libs/libgtest.a \
 			  ../src/lib$(PRODUCT_NAME).a 
+endif
 
 CC_SRCS=$(call rwildcard,,*.cpp)
 CC_OBJS=$(CC_SRCS:.cpp=.o)
