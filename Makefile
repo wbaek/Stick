@@ -3,6 +3,7 @@ NUMBER_OF_BUILD_THREAD=16
 all:build
 
 prepare:
+	sh ./scripts/install/install_instant.sh
 
 help:
 	make -C src
