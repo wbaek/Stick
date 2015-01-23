@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdlib>
 #include <getopt.h>
 
 void help(char* execute) {
