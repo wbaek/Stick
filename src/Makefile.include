@@ -53,6 +53,14 @@ ifeq ($(ENABLE_AVX), true)
 	PRODUCT_NAME := ${PRODUCT_NAME:%=%_avx}
 endif
 
+INCLUDE += -I${DEPENDENCY_PATH}instant/include
+LIB_PATH += -L${DEPENDENCY_PATH}instant/lib
+DYNAMIC_LIBS += -linstant
+
+INCLUDE += -I/usr/local/include
+LIB_PATH += -L/usr/local/lib
+DYNAMIC_LIBS += -lopencv_core -lopencv_imgproc -lopencv_highgui
+
 %.o : %.cpp
 	$(GCC) $(CCFLAGS) $(INCLUDE) $(DEFINE_FLAGS) -c $< -o $@
 
