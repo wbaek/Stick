@@ -7,11 +7,11 @@ OBJS=$(CC_OBJS)
 
 STATIC_LIBS := ../src/lib$(PRODUCT_NAME).a $(STATIC_LIBS)
 
-TARGET=$(PRODUCT_NAME).e
+TARGET=$(OBJS:.o=)
 build:$(TARGET)
 
 $(TARGET):$(OBJS)
-	$(GCC) $(LDFLAGS) $(OBJS) $(LIB_PATH) $(DYNAMIC_LIBS) $(STATIC_LIBS) -o $@
+	$(GCC) $(LDFLAGS) $@.o $(LIB_PATH) $(DYNAMIC_LIBS) $(STATIC_LIBS) -o $@.e
 	@printf "\033[0;32m============================================================\033[0m\n"
 	@printf "\033[0;32m= Build Complete : $@ \033[0m\n"
 	@printf "\033[0;32m============================================================\033[0m\n"
