@@ -6,6 +6,7 @@
 
 #include <utils/string.hpp>
 #include <utils/filesystem.hpp>
+#include <utils/others.hpp>
 #include <opencv2/opencv.hpp>
 
 cv::Point transform(const cv::Mat& affine, float x, float y) {
@@ -187,6 +188,7 @@ int main(int argc, char* argv[]) {
         help(argv[0]);
     }
 
+    double current = instant::Utils::Others::GetMilliSeconds();
     std::vector<std::string> filelist;
     instant::Utils::Filesystem::GetFileNames(dataPath, filelist);
 
@@ -201,7 +203,7 @@ int main(int argc, char* argv[]) {
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
         cv::GaussianBlur(image, image, cv::Size(gaussianBlurSize, gaussianBlurSize), 0);
         copyTo<unsigned char>(image, templateImage, affine);
-        cv::imshow("template", templateImage);
+        //cv::imshow("template", templateImage);
 
         std::vector<cv::Mat> imageGradient = calcGradient(image);
         gradient.resize( imageGradient.size() );
@@ -216,37 +218,50 @@ int main(int argc, char* argv[]) {
     cv::Mat hessianInv = (descent * descent.t()).inv();
 
     // active computing
-    for(std::string& filename : filelist){ 
-        if(verbose) std::cout << filename << ": ";
-        cv::Mat color = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
+    for(std::string& filename : filelist){
+        std::vector<cv::Mat> affineList;        
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
+
+        double startTime = instant::Utils::Others::GetMilliSeconds();
         cv::GaussianBlur(image, image, cv::Size(gaussianBlurSize, gaussianBlurSize), 0);
-        for(int k=0; k<iteration; k++) {
+
+        double normOfDelta, normOfError;
+        int k=0;
+        for(k=0; k<iteration; k++) {
             cv::Mat error = calcError(image, templateImage, affine);
 
             cv::Mat errorVector = error.reshape(0, error.size().area());
             cv::Mat deltaAffine = hessianInv * (descent * errorVector);
             affine = updateAffineCompositional(affine, inverseAffine(deltaAffine));
+            affineList.push_back( affine );
 
-            drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 0, 255));
-            double normOfDelta = cv::norm( deltaAffine, cv::NORM_L2 );
-            double normOfError = cv::norm( errorVector, cv::NORM_L2 );
-            if( normOfDelta < epsilon || k==iteration-1 ){
-                if(verbose) std::cout << "iter=" << k << " ||deltaAffine||=" << normOfDelta << " ||error||=" << normOfError;
-                cv::imshow("error", error / (255.0*2) + 0.5);
+            normOfDelta = cv::norm( deltaAffine, cv::NORM_L2 );
+            normOfError = cv::norm( errorVector, cv::NORM_L2 ) / (double)errorVector.size().area();
+            if( normOfDelta < epsilon )
                 break;
-            }
         }
+        double endTime = instant::Utils::Others::GetMilliSeconds();
 
-        copyTo<unsigned char>(image, generatedImage, affine);
-        cv::imshow("generated", generatedImage);
+        //copyTo<unsigned char>(image, generatedImage, affine);
+        //cv::imshow("generated", generatedImage);
 
-        if(verbose) std::cout << std::endl;
+        // draw tracking result
+        cv::Mat color = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
+        for(auto affineIter : affineList) {
+            drawAffine(color, affineIter, kTemplateImageSize, cv::Scalar(0, 0, 255), 1);
+        }
         drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 2);
         cv::imshow("image", color);
         char ch = cv::waitKey(1);
         if( ch == 'q' || ch == 'Q' )
             break;
+
+        if(verbose) {
+            std::string message =
+                instant::Utils::String::Format("%s: iter=%03d, delta=%.3f, error=%.3f, time=%.3fsec",
+                        filename.c_str(), k, normOfDelta, normOfError, (endTime-startTime)/1000.0);
+            std::cout << message << std::endl;
+        }
     }
 
     return 0;
