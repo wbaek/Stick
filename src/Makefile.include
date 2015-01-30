@@ -10,7 +10,7 @@ rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst 
 
 GCC=g++
 
-CCFLAGS := -m$(OS_SIZE) -O2
+CCFLAGS := -m$(OS_SIZE) -O3
 LDFLAGS := 
 INCLUDE := -I../include 
 LIB_PATH := 

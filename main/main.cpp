@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
     const std::string imageFilenameTemplate = dataPath + "/im%03d.jpg";
 
     cv::Mat affine(3, 2, cv::DataType<float>::type);
-    const cv::Size kTemplateImageSize(150, 150);
+    const cv::Size kTemplateImageSize(200, 150);
     cv::Mat templateImage(kTemplateImageSize, cv::DataType<unsigned char>::type);
 
     {
@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
 
         for(int k=0; k<100; k++) {
             cv::Mat error = calcError(image, templateImage, affine);
-            cv::imshow("error", error);
+            cv::imshow("error", error / (255.0) + 0.5);
 
             cv::Mat errorVector = error.reshape(0, error.size().area());
             cv::Mat deltaAffine = hessianInv * (descent * errorVector);
@@ -200,6 +200,9 @@ int main(int argc, char* argv[]) {
             std::cout << normOfDelta << std::endl;
             if( normOfDelta < 0.01 )
                 break;
+
+            cv::imshow("image", color);
+            cv::waitKey(0);
         }
         
         cv::imshow("image", color);
