@@ -1,4 +1,5 @@
-ESMTracking [![Build Status](https://travis-ci.org/wbaek/ESMTracking.svg)](https://travis-ci.org/wbaek/ESMTracking)
+TemplateBasedTracking [![Build Status](https://travis-ci.org/wbaek/TemplateBasedTracking.svg)](https://travis-ci.org/wbaek/TemplateBasedTracking)
 ====
 
-ESMTracking
+TemplateBasedTracking
+
