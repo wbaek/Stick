@@ -5,15 +5,8 @@
 #include <vector>
 
 #include <utils/string.hpp>
+#include <utils/filesystem.hpp>
 #include <opencv2/opencv.hpp>
-
-void help(char* execute) {
-    std::cerr << "usage: " << execute << " [-h] -p DATA_PATH" << std::endl;
-    std::cerr << "" << std::endl;
-    std::cerr << "\t-h, --help              show this help message and exit" << std::endl;
-    std::cerr << "\t-p, --path DATA_PATH    set DATA_PATH" << std::endl;
-    exit(-1);
-}
 
 cv::Point transform(const cv::Mat& affine, float x, float y) {
     float dx = (1.0+affine.at<float>(0))*x +      affine.at<float>(2) *y + affine.at<float>(4);
@@ -39,17 +32,17 @@ cv::Mat updateAffineCompositional(const cv::Mat& affine, const cv::Mat& delta) {
     cv::Mat updated(3, 2, cv::DataType<float>::type);
 
     updated.at<float>(0) = affine.at<float>(0) + delta.at<float>(0)
-        + affine.at<float>(0) + delta.at<float>(0) + affine.at<float>(2) + delta.at<float>(1);
+        + affine.at<float>(0) * delta.at<float>(0) + affine.at<float>(2) * delta.at<float>(1);
     updated.at<float>(1) = affine.at<float>(1) + delta.at<float>(1)
-        + affine.at<float>(1) + delta.at<float>(0) + affine.at<float>(3) + delta.at<float>(1);
+        + affine.at<float>(1) * delta.at<float>(0) + affine.at<float>(3) * delta.at<float>(1);
     updated.at<float>(2) = affine.at<float>(2) + delta.at<float>(2)
-        + affine.at<float>(0) + delta.at<float>(2) + affine.at<float>(2) + delta.at<float>(3);
+        + affine.at<float>(0) * delta.at<float>(2) + affine.at<float>(2) * delta.at<float>(3);
     updated.at<float>(3) = affine.at<float>(3) + delta.at<float>(3)
-        + affine.at<float>(1) + delta.at<float>(2) + affine.at<float>(3) + delta.at<float>(3);
+        + affine.at<float>(1) * delta.at<float>(2) + affine.at<float>(3) * delta.at<float>(3);
     updated.at<float>(4) = affine.at<float>(4) + delta.at<float>(4)
-        + affine.at<float>(0) + delta.at<float>(4) + affine.at<float>(2) + delta.at<float>(5);
+        + affine.at<float>(0) * delta.at<float>(4) + affine.at<float>(2) * delta.at<float>(5);
     updated.at<float>(5) = affine.at<float>(5) + delta.at<float>(5)
-        + affine.at<float>(1) + delta.at<float>(4) + affine.at<float>(3) + delta.at<float>(5);
+        + affine.at<float>(1) * delta.at<float>(4) + affine.at<float>(3) * delta.at<float>(5);
 
     return updated;
 }
@@ -81,7 +74,6 @@ cv::Mat calcSteepestDescent(std::vector<cv::Mat>& gradient) {
             descent.at<float>(5, y*size.width+x) = gradient[1].at<float>(y, x);
         }
     }
-
     return descent;
 }
 
@@ -89,26 +81,32 @@ cv::Mat calcError(const cv::Mat& image, const cv::Mat& templateImage, const cv::
     cv::Point delta(image.size().width/2, image.size().height/2);
     cv::Point templateDelta(templateImage.size().width/2, templateImage.size().height/2);
 
-    cv::Mat error(templateImage.size(), cv::DataType<float>::type);
+    cv::Mat error = cv::Mat::zeros(templateImage.size(), cv::DataType<float>::type);
     for(int y=-templateImage.size().height/2; y<templateImage.size().height/2; y++) {
         for(int x=-templateImage.size().width/2; x<templateImage.size().width/2; x++) {
+            cv::Point imagePoint = transform(affine, x, y) + delta;
+            if( 0 <= imagePoint.x && imagePoint.x < image.size().width &&
+                0 <= imagePoint.y && imagePoint.y < image.size().height ) {
             error.at<float>(cv::Point(x, y) + templateDelta)
-                = ( (float)image.at<unsigned char>(transform(affine, x, y) + delta)
+                = ( (float)image.at<unsigned char>(imagePoint)
                         - (float)templateImage.at<unsigned char>(cv::Point(x, y) + templateDelta) );
+            }
         }
     }
     return error;
 }
 
-void copyTo(cv::Mat& image, cv::Mat& templateImage, cv::Mat& affineInv) {
-    cv::Size sourceSize = image.size();
-    cv::Size targetSize = templateImage.size();
+template<typename DATA_TYPE>
+void copyTo(const cv::Mat& image, cv::Mat& templateImage, const cv::Mat& affine) {
+    cv::Point delta(image.size().width/2, image.size().height/2);
+    cv::Point templateDelta(templateImage.size().width/2, templateImage.size().height/2);
 
-    for(int y = -targetSize.height/2; y < targetSize.height/2; y++) {
-        for(int x = -targetSize.width/2; x < targetSize.width/2; x++) {
-            cv::Point d = transform(affineInv, x, y);
-            templateImage.at<unsigned char>(y + targetSize.height/2, x + targetSize.width/2)
-                = image.at<unsigned char>(d.y + sourceSize.height/2, d.x + sourceSize.width/2);
+    for(int y=-templateImage.size().height/2; y<templateImage.size().height/2; y++) {
+        for(int x=-templateImage.size().width/2; x<templateImage.size().width/2; x++) {
+            cv::Point imagePoint = transform(affine, x, y) + delta;
+            imagePoint.x = std::min(std::max(0, imagePoint.x), image.size().width);
+            imagePoint.y = std::min(std::max(0, imagePoint.y), image.size().height);
+            templateImage.at<DATA_TYPE>(cv::Point(x, y) + templateDelta) = image.at<DATA_TYPE>(imagePoint);
         }
     }
 }
@@ -127,19 +125,51 @@ void drawAffine(cv::Mat& image, cv::Mat& affine, const cv::Size kTemplateSize, c
     }
 }
 
+void help(char* execute) {
+    std::cerr << "usage: " << execute << " [-h] -p DATA_PATH [-t TEMPLATE_SIZE] [-e EPSILON_VALUE] [-k ITERATION] [-v]" << std::endl;
+    std::cerr << "" << std::endl;
+    std::cerr << "\t-h, --help                     show this help message and exit" << std::endl;
+    std::cerr << "\t-p, --path      DATA_PATH      set DATA_PATH" << std::endl;
+    std::cerr << "\t-t, --template  SIZE           set TEMPLATE_SIZE (default:150)" << std::endl;
+    std::cerr << "\t-e, --epsilon   EPSILON_VALUE  set EPSILON_VALUE (default:0.05)" << std::endl;
+    std::cerr << "\t-k, --iteration ITERATION      set max ITERATION per update (default:100)" << std::endl;
+    std::cerr << "\t-v, --verbose                  verbose" << std::endl;
+    exit(-1);
+}
+
 int main(int argc, char* argv[]) {
     static struct option longOptions[] = {
-        {"help", no_argument,       0, 'h'},
-        {"path", required_argument, 0, 'p'},
+        {"help",      no_argument,       0, 'h'},
+        {"path",      required_argument, 0, 'p'},
+        {"template",  required_argument, 0, 't'},
+        {"epsilon",   required_argument, 0, 'e'},
+        {"iteration", required_argument, 0, 'k'},
+        {"verboase",  no_argument,       0, 'v'},
     };
 
     std::string dataPath;
+    int templateSize = 150;
+    float epsilon = 0.05;
+    int iteration = 100;
+    bool verbose = 0;
 
     int argopt, optionIndex=0;
-    while( (argopt = getopt_long(argc, argv, "hp:", longOptions, &optionIndex)) != -1 ) {
+    while( (argopt = getopt_long(argc, argv, "hp:t:e:k:v", longOptions, &optionIndex)) != -1 ) {
         switch( argopt ) {
             case 'p':
                 dataPath = std::string(optarg);
+                break;
+            case 't':
+                instant::Utils::String::ToPrimitive<int>(optarg, templateSize);
+                break;
+            case 'e':
+                instant::Utils::String::ToPrimitive<float>(optarg, epsilon);
+                break;
+            case 'k':
+                instant::Utils::String::ToPrimitive<int>(optarg, iteration);
+                break;
+            case 'v':
+                verbose = true;
                 break;
             case 'h':
             default:
@@ -151,68 +181,65 @@ int main(int argc, char* argv[]) {
         help(argv[0]);
     }
 
-    const std::string imageFilenameTemplate = dataPath + "/im%03d.jpg";
+    std::vector<std::string> filelist;
+    instant::Utils::Filesystem::GetFileNames(dataPath, filelist);
 
-    cv::Mat affine(3, 2, cv::DataType<float>::type);
-    const cv::Size kTemplateImageSize(200, 150);
+    // pre-computing
+    cv::Mat affine = cv::Mat::zeros(3, 2, cv::DataType<float>::type);
+    const cv::Size kTemplateImageSize(templateSize, templateSize);
     cv::Mat templateImage(kTemplateImageSize, cv::DataType<unsigned char>::type);
-
+    cv::Mat generatedImage(kTemplateImageSize, cv::DataType<unsigned char>::type);
+    std::vector<cv::Mat> gradient;
     {
-        std::string filename = instant::Utils::String::Format(imageFilenameTemplate.c_str(), 0);
+        std::string filename = filelist[0];
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
-        copyTo(image, templateImage, affine);
+        copyTo<unsigned char>(image, templateImage, affine);
         cv::imshow("template", templateImage);
+
+        std::vector<cv::Mat> imageGradient = calcGradient(image);
+        gradient.resize( imageGradient.size() );
+        for(unsigned int i=0; i<imageGradient.size(); i++) {
+            gradient[i] = cv::Mat::zeros(templateImage.size(), cv::DataType<float>::type);
+            copyTo<float>(imageGradient[i], gradient[i], affine);
+        }
     }
-    std::vector<cv::Mat> gradient = calcGradient( templateImage);
-    cv::imshow("gradient x", gradient[0] / (255.0) + 0.5);
-    cv::imshow("gradient y", gradient[1] / (255.0) + 0.5);
 
     cv::Mat descent = calcSteepestDescent( gradient );
     cv::Mat descentImage = descent.reshape(0, kTemplateImageSize.height*6);
-    cv::imshow("steeped descent", descentImage / (kTemplateImageSize.area()) + 0.5);
-
     cv::Mat hessianInv = (descent * descent.t()).inv();
 
-    for(int i=0; i<200; i++){ 
-        std::cout << "::::::::::::::::::::::::::::::::::::::::::::::::::::::::" << std::endl;
-        std::string filename = instant::Utils::String::Format(imageFilenameTemplate.c_str(), i);
+    // active computing
+    for(std::string& filename : filelist){ 
+        if(verbose) std::cout << filename << ": ";
+
         cv::Mat color = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
         drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 3);
 
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
-
-        for(int k=0; k<100; k++) {
+        for(int k=0; k<iteration; k++) {
             cv::Mat error = calcError(image, templateImage, affine);
-            cv::imshow("error", error / (255.0) + 0.5);
 
             cv::Mat errorVector = error.reshape(0, error.size().area());
             cv::Mat deltaAffine = hessianInv * (descent * errorVector);
-
-            std::cout << "affine = " << affine << std::endl;
             affine = updateAffineCompositional(affine, inverseAffine(deltaAffine));
-            std::cout << "affine = " << affine << std::endl;
-            std::cout << "delta  = " << (deltaAffine) << std::endl;
-            std::cout << "deltaI = " << inverseAffine(deltaAffine) << std::endl;
 
             drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 0, 255));
-
             double normOfDelta = cv::norm( deltaAffine, cv::NORM_L2 );
-            std::cout << normOfDelta << std::endl;
-            if( normOfDelta < 0.01 )
+            if( normOfDelta < epsilon ){
+                if(verbose) std::cout << "iter=" << k << " ||deltaAffine||=" << normOfDelta;
                 break;
-
-            cv::imshow("image", color);
-            cv::waitKey(0);
+            }
         }
-        
-        cv::imshow("image", color);
 
-        char ch = cv::waitKey(0);
+        copyTo<unsigned char>(image, generatedImage, affine);
+        cv::imshow("generated", generatedImage);
+        
+        if(verbose) std::cout << std::endl;
+        cv::imshow("image", color);
+        char ch = cv::waitKey(1);
         if( ch == 'q' || ch == 'Q' )
             break;
     }
-
-
 
     return 0;
 }
