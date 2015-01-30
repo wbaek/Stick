@@ -131,6 +131,7 @@ void help(char* execute) {
     std::cerr << "\t-h, --help                     show this help message and exit" << std::endl;
     std::cerr << "\t-p, --path      DATA_PATH      set DATA_PATH" << std::endl;
     std::cerr << "\t-t, --template  SIZE           set TEMPLATE_SIZE (default:150)" << std::endl;
+    std::cerr << "\t-g, --gaussian  KERNAL_SIZE    set GAUSSIAN_KERNAL_SIZE (default:15)" << std::endl;
     std::cerr << "\t-e, --epsilon   EPSILON_VALUE  set EPSILON_VALUE (default:0.05)" << std::endl;
     std::cerr << "\t-k, --iteration ITERATION      set max ITERATION per update (default:100)" << std::endl;
     std::cerr << "\t-v, --verbose                  verbose" << std::endl;
@@ -142,6 +143,7 @@ int main(int argc, char* argv[]) {
         {"help",      no_argument,       0, 'h'},
         {"path",      required_argument, 0, 'p'},
         {"template",  required_argument, 0, 't'},
+        {"gaussian",  required_argument, 0, 'g'},
         {"epsilon",   required_argument, 0, 'e'},
         {"iteration", required_argument, 0, 'k'},
         {"verboase",  no_argument,       0, 'v'},
@@ -151,10 +153,11 @@ int main(int argc, char* argv[]) {
     int templateSize = 150;
     float epsilon = 0.05;
     int iteration = 100;
+    int gaussianBlurSize = 15;
     bool verbose = 0;
 
     int argopt, optionIndex=0;
-    while( (argopt = getopt_long(argc, argv, "hp:t:e:k:v", longOptions, &optionIndex)) != -1 ) {
+    while( (argopt = getopt_long(argc, argv, "hp:t:g:e:k:v", longOptions, &optionIndex)) != -1 ) {
         switch( argopt ) {
             case 'p':
                 dataPath = std::string(optarg);
@@ -164,6 +167,9 @@ int main(int argc, char* argv[]) {
                 break;
             case 'e':
                 instant::Utils::String::ToPrimitive<float>(optarg, epsilon);
+                break;
+            case 'g':
+                instant::Utils::String::ToPrimitive<int>(optarg, gaussianBlurSize);
                 break;
             case 'k':
                 instant::Utils::String::ToPrimitive<int>(optarg, iteration);
@@ -193,6 +199,7 @@ int main(int argc, char* argv[]) {
     {
         std::string filename = filelist[0];
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
+        cv::GaussianBlur(image, image, cv::Size(gaussianBlurSize, gaussianBlurSize), 0);
         copyTo<unsigned char>(image, templateImage, affine);
         cv::imshow("template", templateImage);
 
@@ -211,11 +218,9 @@ int main(int argc, char* argv[]) {
     // active computing
     for(std::string& filename : filelist){ 
         if(verbose) std::cout << filename << ": ";
-
         cv::Mat color = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
-        drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 3);
-
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
+        cv::GaussianBlur(image, image, cv::Size(gaussianBlurSize, gaussianBlurSize), 0);
         for(int k=0; k<iteration; k++) {
             cv::Mat error = calcError(image, templateImage, affine);
 
@@ -225,16 +230,19 @@ int main(int argc, char* argv[]) {
 
             drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 0, 255));
             double normOfDelta = cv::norm( deltaAffine, cv::NORM_L2 );
-            if( normOfDelta < epsilon ){
-                if(verbose) std::cout << "iter=" << k << " ||deltaAffine||=" << normOfDelta;
+            double normOfError = cv::norm( errorVector, cv::NORM_L2 );
+            if( normOfDelta < epsilon || k==iteration-1 ){
+                if(verbose) std::cout << "iter=" << k << " ||deltaAffine||=" << normOfDelta << " ||error||=" << normOfError;
+                cv::imshow("error", error / (255.0*2) + 0.5);
                 break;
             }
         }
 
         copyTo<unsigned char>(image, generatedImage, affine);
         cv::imshow("generated", generatedImage);
-        
+
         if(verbose) std::cout << std::endl;
+        drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 2);
         cv::imshow("image", color);
         char ch = cv::waitKey(1);
         if( ch == 'q' || ch == 'Q' )
