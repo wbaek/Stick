@@ -36,7 +36,6 @@ void help(char* execute) {
     std::cerr << "usage: " << execute << " [-h] -p DATA_PATH [-t TEMPLATE_SIZE] [-e EPSILON_VALUE] [-k ITERATION] [-v]" << std::endl;
     std::cerr << "" << std::endl;
     std::cerr << "\t-h, --help                     show this help message and exit" << std::endl;
-    std::cerr << "\t-p, --path      DATA_PATH      set DATA_PATH" << std::endl;
     std::cerr << "\t-t, --template  SIZE           set TEMPLATE_SIZE (default:150)" << std::endl;
     std::cerr << "\t-g, --gaussian  KERNAL_SIZE    set GAUSSIAN_KERNAL_SIZE (default:15)" << std::endl;
     std::cerr << "\t-e, --epsilon   EPSILON_VALUE  set EPSILON_VALUE (default:0.05)" << std::endl;
@@ -48,7 +47,6 @@ void help(char* execute) {
 int main(int argc, char* argv[]) {
     static struct option longOptions[] = {
         {"help",      no_argument,       0, 'h'},
-        {"path",      required_argument, 0, 'p'},
         {"template",  required_argument, 0, 't'},
         {"gaussian",  required_argument, 0, 'g'},
         {"epsilon",   required_argument, 0, 'e'},
@@ -56,7 +54,6 @@ int main(int argc, char* argv[]) {
         {"verboase",  no_argument,       0, 'v'},
     };
 
-    std::string dataPath;
     int templateSize = 150;
     float epsilon = 0.05;
     int iteration = 100;
@@ -64,11 +61,8 @@ int main(int argc, char* argv[]) {
     bool verbose = 0;
 
     int argopt, optionIndex=0;
-    while( (argopt = getopt_long(argc, argv, "hp:t:g:e:k:v", longOptions, &optionIndex)) != -1 ) {
+    while( (argopt = getopt_long(argc, argv, "ht:g:e:k:v", longOptions, &optionIndex)) != -1 ) {
         switch( argopt ) {
-            case 'p':
-                dataPath = std::string(optarg);
-                break;
             case 't':
                 instant::Utils::String::ToPrimitive<int>(optarg, templateSize);
                 break;
@@ -90,57 +84,69 @@ int main(int argc, char* argv[]) {
                 break;
         }
     }
-    if( dataPath.size() == 0 ) {
-        help(argv[0]);
-    }
 
-    double current = instant::Utils::Others::GetMilliSeconds();
-    std::vector<std::string> filelist;
-    instant::Utils::Filesystem::GetFileNames(dataPath, filelist);
+    cv::VideoCapture capture(0);
+
+    const cv::Size kTemplateImageSize(templateSize, templateSize);
 
     Tracking::InverseCompositional<Tracking::Affine> tracker;
     tracker.setMaxIteration(iteration);
     tracker.setGaussianKernalSize(gaussianBlurSize);
     tracker.setEpsilon(epsilon);
 
-    // pre-computing
-    const cv::Size kTemplateImageSize(templateSize, templateSize);
-    {
-        std::string filename = filelist[0];
-        cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
-
-        cv::Mat affine = cv::Mat::zeros(3, 2, cv::DataType<float>::type);
-        tracker.setPose(affine);
-        cv::Mat templateImage = tracker.getTrackedImage(image, kTemplateImageSize);
-        tracker.setTemplate(templateImage);
-    }
-
-    // active computing
-    for(std::string& filename : filelist){
-        cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
+    bool processing = true, tracking = false;
+    while(processing) {
+        cv::Mat image;
+        capture >> image;
 
         double startTime = instant::Utils::Others::GetMilliSeconds();
-        tracker.track(image);
+        if(tracking) {
+            cv::Mat gray;
+            cv::cvtColor(image, gray, CV_BGR2GRAY);
+            tracker.track(gray);
+        }
         double endTime = instant::Utils::Others::GetMilliSeconds();
 
         // draw tracking result
-        cv::Mat color = cv::imread(filename, CV_LOAD_IMAGE_COLOR);
         if( verbose ) {
             for(auto affineIter : tracker.getUpdatePoseList()) {
-                drawAffine(color, affineIter, kTemplateImageSize, cv::Scalar(0, 0, 255), 1);
+                drawAffine(image, affineIter, kTemplateImageSize, cv::Scalar(0, 0, 255), 1);
             }
         }
         cv::Mat affine = tracker.getPose();
-        drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 2);
-        cv::imshow("image", color);
+        drawAffine(image, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 2);
+        cv::imshow("image", image);
         char ch = cv::waitKey(1);
-        if( ch == 'q' || ch == 'Q' )
-            break;
+        switch( ch ) {
+            case 'q':
+            case 'Q':
+                processing = false;
+                break;
+            case 'r':
+            case 'R':
+                {
+                    cv::Mat affine = cv::Mat::zeros(3, 2, cv::DataType<double>::type);
+                    tracker.setPose(affine);
+                    tracking = false;
+                }
+                break;
+            case ' ':
+                {
+                    cv::Mat gray;
+                    cv::cvtColor(image, gray, CV_BGR2GRAY);
 
+                    cv::Mat affine = cv::Mat::zeros(3, 2, cv::DataType<double>::type);
+                    tracker.setPose(affine);
+                    cv::Mat templateImage = tracker.getTrackedImage(gray, kTemplateImageSize);
+                    tracker.setTemplate(templateImage);
+                    tracking = true;
+                }
+                break;
+        }
+        
         if(verbose) {
             std::string message =
-                instant::Utils::String::Format("%s: iter=%03d, delta=%.3f, error=%02.3f, time=%.3fsec",
-                        filename.c_str(),
+                instant::Utils::String::Format("iter=%03d, delta=%.3f, error=%02.3f, time=%.3fsec",
                         tracker.getUpdateIteration(),
                         tracker.getDeltaPose(),
                         tracker.getError(),
