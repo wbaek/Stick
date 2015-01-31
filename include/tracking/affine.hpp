@@ -1,9 +1,9 @@
 #pragma once
-
+#include "model.hpp"
 #include <opencv2/opencv.hpp>
 
 namespace Tracking {
-    class Affine {
+    class Affine : public Model {
         private:
             cv::Mat model;
 
@@ -14,6 +14,10 @@ namespace Tracking {
             virtual ~Affine() {
             }
 
+            static cv::Mat getInitial() {
+                return cv::Mat::zeros(3, 2, cv::DataType<double>::type);
+            }
+
             void setModel(const cv::Mat& model) {
                 this->model = model.clone();
             }
@@ -21,10 +25,14 @@ namespace Tracking {
                 return this->model;
             }
 
-            cv::Point transform(const cv::Point& point) {
-                double dx = (1.0+this->model.at<double>(0))*point.x +      this->model.at<double>(2) *point.y + this->model.at<double>(4);
-                double dy =      this->model.at<double>(1) *point.x + (1.0+this->model.at<double>(3))*point.y + this->model.at<double>(5);
+            static cv::Point transform(const cv::Mat& model, const::cv::Point& point) {
+                double dx = (1.0+model.at<double>(0))*point.x +      model.at<double>(2) *point.y + model.at<double>(4);
+                double dy =      model.at<double>(1) *point.x + (1.0+model.at<double>(3))*point.y + model.at<double>(5);
                 return cv::Point(dx, dy);
+
+            }
+            cv::Point transform(const cv::Point& point) {
+                return Affine::transform(this->model, point);
             }
 
             cv::Mat inverse() {

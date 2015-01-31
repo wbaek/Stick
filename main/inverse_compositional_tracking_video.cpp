@@ -36,8 +36,8 @@ void help(char* execute) {
     std::cerr << "usage: " << execute << " [-h] -p DATA_PATH [-t TEMPLATE_SIZE] [-e EPSILON_VALUE] [-k ITERATION] [-v]" << std::endl;
     std::cerr << "" << std::endl;
     std::cerr << "\t-h, --help                     show this help message and exit" << std::endl;
-    std::cerr << "\t-t, --template  SIZE           set TEMPLATE_SIZE (default:150)" << std::endl;
-    std::cerr << "\t-g, --gaussian  KERNAL_SIZE    set GAUSSIAN_KERNAL_SIZE (default:15)" << std::endl;
+    std::cerr << "\t-t, --template  SIZE           set TEMPLATE_SIZE (default:300)" << std::endl;
+    std::cerr << "\t-g, --gaussian  KERNAL_SIZE    set GAUSSIAN_KERNAL_SIZE (default:49)" << std::endl;
     std::cerr << "\t-e, --epsilon   EPSILON_VALUE  set EPSILON_VALUE (default:0.05)" << std::endl;
     std::cerr << "\t-k, --iteration ITERATION      set max ITERATION per update (default:100)" << std::endl;
     std::cerr << "\t-v, --verbose                  verbose" << std::endl;
@@ -54,10 +54,10 @@ int main(int argc, char* argv[]) {
         {"verboase",  no_argument,       0, 'v'},
     };
 
-    int templateSize = 150;
+    int templateSize = 300;
     float epsilon = 0.05;
     int iteration = 100;
-    int gaussianBlurSize = 15;
+    int gaussianBlurSize = 49;
     bool verbose = 0;
 
     int argopt, optionIndex=0;

@@ -10,10 +10,13 @@
 #include <opencv2/opencv.hpp>
 
 #include <tracking/affine.hpp>
+#include <tracking/homography.hpp>
 #include <tracking/inverse_compositional.hpp>
 
+typedef Tracking::Affine MODEL;
+
 cv::Point transform(const cv::Mat& pose, int x, int y) {
-    Tracking::Affine model;
+    MODEL model;
     model.setModel(pose);
     return model.transform(cv::Point(x, y));
 }
@@ -97,7 +100,7 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> filelist;
     instant::Utils::Filesystem::GetFileNames(dataPath, filelist);
 
-    Tracking::InverseCompositional<Tracking::Affine> tracker;
+    Tracking::InverseCompositional<MODEL> tracker;
     tracker.setMaxIteration(iteration);
     tracker.setGaussianKernalSize(gaussianBlurSize);
     tracker.setEpsilon(epsilon);
@@ -108,7 +111,7 @@ int main(int argc, char* argv[]) {
         std::string filename = filelist[0];
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
 
-        cv::Mat affine = cv::Mat::zeros(3, 2, cv::DataType<float>::type);
+        cv::Mat affine = MODEL::getInitial();
         tracker.setPose(affine);
         cv::Mat templateImage = tracker.getTrackedImage(image, kTemplateImageSize);
         tracker.setTemplate(templateImage);
@@ -132,7 +135,7 @@ int main(int argc, char* argv[]) {
         cv::Mat affine = tracker.getPose();
         drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 2);
         cv::imshow("image", color);
-        char ch = cv::waitKey(1);
+        char ch = cv::waitKey(30);
         if( ch == 'q' || ch == 'Q' )
             break;
 

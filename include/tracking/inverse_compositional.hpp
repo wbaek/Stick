@@ -105,10 +105,10 @@ namespace Tracking {
                 cv::Mat descent = cv::Mat::zeros(6, size.area(), cv::DataType<double>::type);
                 for(int y=0; y<size.height; y++) {
                     for(int x=0; x<size.width; x++) {
-                        descent.at<double>(0, y*size.width+x) = (double)(x - delta.x) * gradient[0].at<double>(y, x);
-                        descent.at<double>(1, y*size.width+x) = (double)(x - delta.x) * gradient[1].at<double>(y, x);
-                        descent.at<double>(2, y*size.width+x) = (double)(y - delta.y) * gradient[0].at<double>(y, x);
-                        descent.at<double>(3, y*size.width+x) = (double)(y - delta.y) * gradient[1].at<double>(y, x);
+                        descent.at<double>(0, y*size.width+x) = ((double)x) * gradient[0].at<double>(y, x);
+                        descent.at<double>(1, y*size.width+x) = ((double)x) * gradient[1].at<double>(y, x);
+                        descent.at<double>(2, y*size.width+x) = ((double)y) * gradient[0].at<double>(y, x);
+                        descent.at<double>(3, y*size.width+x) = ((double)y) * gradient[1].at<double>(y, x);
                         descent.at<double>(4, y*size.width+x) = gradient[0].at<double>(y, x);
                         descent.at<double>(5, y*size.width+x) = gradient[1].at<double>(y, x);
                     }
