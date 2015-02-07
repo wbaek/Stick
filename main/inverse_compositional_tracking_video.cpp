@@ -137,8 +137,7 @@ int main(int argc, char* argv[]) {
 
                     cv::Mat affine = cv::Mat::zeros(3, 2, cv::DataType<double>::type);
                     tracker.setPose(affine);
-                    cv::Mat templateImage = tracker.getTrackedImage(gray, kTemplateImageSize);
-                    tracker.setTemplate(templateImage);
+                    tracker.setTemplate(gray, kTemplateImageSize);
                     tracking = true;
                 }
                 break;
