@@ -1,4 +1,4 @@
-PROJECT_NAME=esm_tracking
+PROJECT_NAME=templatetracnking
 PRODUCT_NAME=$(PROJECT_NAME)
 
 OS = $(shell uname -s 2>/dev/null | tr "[:upper:]" "[:lower:]")
@@ -20,7 +20,7 @@ DEFINE_FLAGS := -D__PROJECT_NAME__=\"$(PROJECT_NAME)\"
 BASE_PATH = $(dir $(shell pwd))
 DEPENDENCY_PATH = $(BASE_PATH)/dependency/
 
-ENABLE_OPENMP=true
+ENABLE_OPENMP=false
 ENABLE_SIMD=false
 ENABLE_AVX=false
 ifeq ($(OS), darwin)
