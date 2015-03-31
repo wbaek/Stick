@@ -9,16 +9,18 @@
 #include <utils/others.hpp>
 #include <opencv2/opencv.hpp>
 
-#include <tracking/affine.hpp>
-#include <tracking/homography.hpp>
-#include <tracking/inverse_compositional.hpp>
+#include <tracking/inverse_additional.hpp>
 
-typedef Tracking::Affine MODEL;
 
 cv::Point transform(const cv::Mat& pose, int x, int y) {
-    MODEL model;
-    model.setModel(pose);
-    return model.transform(cv::Point(x, y));
+    cv::Mat in(3, 1, cv::DataType<double>::type);
+    in.at<double>(0) = x;
+    in.at<double>(1) = y;
+    in.at<double>(2) = 1.0;
+    cv::Mat out = pose * in;
+
+    double z = out.at<double>(2);
+    return cv::Point(out.at<double>(0)/z, out.at<double>(1)/z);
 }
 
 void drawAffine(cv::Mat& image, cv::Mat& affine, const cv::Size kTemplateSize, const cv::Scalar& color=cv::Scalar(0, 255, 0), const int thickness=1) {
@@ -40,8 +42,8 @@ void help(char* execute) {
     std::cerr << "" << std::endl;
     std::cerr << "\t-h, --help                     show this help message and exit" << std::endl;
     std::cerr << "\t-p, --path      DATA_PATH      set DATA_PATH" << std::endl;
-    std::cerr << "\t-t, --template  SIZE           set TEMPLATE_SIZE (default:180)" << std::endl;
-    std::cerr << "\t-g, --gaussian  KERNAL_SIZE    set GAUSSIAN_KERNAL_SIZE (default:9)" << std::endl;
+    std::cerr << "\t-t, --template  SIZE           set TEMPLATE_SIZE (default:150)" << std::endl;
+    std::cerr << "\t-g, --gaussian  KERNAL_SIZE    set GAUSSIAN_KERNAL_SIZE (default:15)" << std::endl;
     std::cerr << "\t-e, --epsilon   EPSILON_VALUE  set EPSILON_VALUE (default:0.05)" << std::endl;
     std::cerr << "\t-k, --iteration ITERATION      set max ITERATION per update (default:100)" << std::endl;
     std::cerr << "\t-v, --verbose                  verbose" << std::endl;
@@ -60,10 +62,10 @@ int main(int argc, char* argv[]) {
     };
 
     std::string dataPath;
-    int templateSize = 180;
+    int templateSize = 150;
     float epsilon = 0.05;
     int iteration = 100;
-    int gaussianBlurSize = 9;
+    int gaussianBlurSize = 15;
     bool verbose = 0;
 
     int argopt, optionIndex=0;
@@ -100,7 +102,7 @@ int main(int argc, char* argv[]) {
     std::vector<std::string> filelist;
     instant::Utils::Filesystem::GetFileNames(dataPath, filelist);
 
-    Tracking::InverseCompositional<MODEL> tracker;
+    Tracking::InverseAdditional tracker;
     tracker.setMaxIteration(iteration);
     tracker.setGaussianKernalSize(gaussianBlurSize);
     tracker.setEpsilon(epsilon);
@@ -110,10 +112,9 @@ int main(int argc, char* argv[]) {
     {
         std::string filename = filelist[0];
         cv::Mat image = cv::imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
-
-        cv::Mat affine = MODEL::getInitial();
-        tracker.setPose(affine);
         tracker.setTemplate(image, kTemplateImageSize);
+
+        cv::imshow("template", tracker.getTemplate());
     }
 
     // active computing
@@ -134,7 +135,11 @@ int main(int argc, char* argv[]) {
         cv::Mat affine = tracker.getPose();
         drawAffine(color, affine, kTemplateImageSize, cv::Scalar(0, 255, 0), 2);
         cv::imshow("image", color);
-        char ch = cv::waitKey(30);
+
+        cv::Mat templateImage = tracker.getTrackedImage(image, kTemplateImageSize);
+        cv::imshow("tracked image", templateImage);
+
+        char ch = cv::waitKey(0);
         if( ch == 'q' || ch == 'Q' )
             break;
 

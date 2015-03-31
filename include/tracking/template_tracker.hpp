@@ -26,7 +26,7 @@ namespace Tracking {
             virtual cv::Mat getTemplate() {
                 return this->templateImage;
             }
-            virtual void setTemplate(const cv::Mat& image) = 0;
+            virtual void setTemplate(const cv::Mat& image, const cv::Size& size=cv::Size()) = 0;
             virtual void track(const cv::Mat& image) = 0;
 
             virtual void setPose(const cv::Mat& pose) = 0;
