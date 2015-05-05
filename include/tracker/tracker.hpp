@@ -48,7 +48,7 @@ namespace Stick {
                 return this->transformedImage.clone();
             }
 
-            const Model* getModel() const {
+            Model* getModel() const {
                 return this->model;
             }
 
