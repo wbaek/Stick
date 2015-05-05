@@ -203,3 +203,28 @@ TEST(Homography, inverse) {
     EXPECT_EQ(4, pt.y);
 }
 
+TEST(Homography, jacobian) {
+    Stick::Homography model;
+
+    cv::Mat jacobian = model.jacobian(cv::Point(3, 4));
+    EXPECT_EQ(3, jacobian.at<double>(0, 0));
+    EXPECT_EQ(4, jacobian.at<double>(0, 1));
+    EXPECT_EQ(1, jacobian.at<double>(0, 2));
+    EXPECT_EQ(0, jacobian.at<double>(0, 3));
+    EXPECT_EQ(0, jacobian.at<double>(0, 4));
+    EXPECT_EQ(0, jacobian.at<double>(0, 5));
+    EXPECT_EQ(-9, jacobian.at<double>(0, 6));
+    EXPECT_EQ(-12, jacobian.at<double>(0, 7));
+    EXPECT_EQ(0, jacobian.at<double>(0, 8));
+
+    EXPECT_EQ(0, jacobian.at<double>(1, 0));
+    EXPECT_EQ(0, jacobian.at<double>(1, 1));
+    EXPECT_EQ(0, jacobian.at<double>(1, 2));
+    EXPECT_EQ(3, jacobian.at<double>(1, 3));
+    EXPECT_EQ(4, jacobian.at<double>(1, 4));
+    EXPECT_EQ(1, jacobian.at<double>(1, 5));
+    EXPECT_EQ(-12, jacobian.at<double>(1, 6));
+    EXPECT_EQ(-16, jacobian.at<double>(1, 7));
+    EXPECT_EQ(0, jacobian.at<double>(1, 8));
+}
+

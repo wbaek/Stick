@@ -13,10 +13,9 @@ namespace Stick {
         protected:
             Model() {
             }
+        public:
             virtual ~Model() {
             }
-
-        public:
             virtual std::string getName() const {
                 std::string className = instant::Utils::Type::GetTypeName(this);
                 return instant::Utils::String::Replace(className, "Stick::", "");
@@ -62,8 +61,13 @@ namespace Stick {
                 return out;
             }
 
+            virtual int getParameterSize() const = 0;
+
             virtual void compose(const cv::Mat& delta) = 0;
             virtual cv::Mat inverse() const = 0;
+
+            virtual cv::Mat jacobian(const cv::Point& at) const =0;
+            virtual cv::Mat jacobian(const cv::Mat& in) const = 0;
 
         protected:
             cv::Mat pose;
