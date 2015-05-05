@@ -1,4 +1,4 @@
-PROJECT_NAME=templatetracnking
+PROJECT_NAME=stick
 PRODUCT_NAME=$(PROJECT_NAME)
 
 OS = $(shell uname -s 2>/dev/null | tr "[:upper:]" "[:lower:]")
