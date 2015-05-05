@@ -31,3 +31,4 @@
 # ignore data folder
 data/
 dependency/
+test/*.png

@@ -98,6 +98,7 @@ TEST(InverseCompositional, calculate_track) {
 
     cv::Mat image = cv::imread("datas/im001_original.jpg", CV_LOAD_IMAGE_GRAYSCALE);
     tracker.track( image );
+    std::cout << tracker.getLogString() << std::endl;
 
     cv::imwrite("transformed.png", tracker.getTransformedImage());
     cv::imwrite("error.png", (tracker.getErrorImage() + 128));

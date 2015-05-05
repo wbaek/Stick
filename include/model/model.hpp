@@ -69,6 +69,22 @@ namespace Stick {
             virtual cv::Mat jacobian(const cv::Point& at) const =0;
             virtual cv::Mat jacobian(const cv::Mat& in) const = 0;
 
+            virtual void draw(cv::Mat& image, const cv::Size& templateSize, const cv::Scalar& color, const int thickness=1) {
+                int dx = image.size().width/2 - templateSize.width/2;
+                int dy = image.size().height/2 - templateSize.height/2;
+
+                std::vector<cv::Point> corners(5);
+                corners[0] = this->transform( cv::Point(0, 0) );
+                corners[1] = this->transform( cv::Point(templateSize.width, 0) );
+                corners[2] = this->transform( cv::Point(templateSize.width, templateSize.height) );
+                corners[3] = this->transform( cv::Point(0, templateSize.height) );
+                corners[4] = corners[0];
+
+                for(int i=0; i<corners.size()-1; i++) {
+                    cv::line(image, corners[i], corners[i+1], color, thickness, 8);
+                }
+            }
+
         protected:
             cv::Mat pose;
     };

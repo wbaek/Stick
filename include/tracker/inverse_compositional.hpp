@@ -2,21 +2,32 @@
 #define __TRACKER_INVERSE_COMPOSITIONAL_HPP__
 
 #include <vector>
+#include <utils/string.hpp>
+
 #include "tracker/tracker.hpp"
 
 namespace Stick {
     class InverseCompositional : public Tracker {
         public:
-            InverseCompositional(Model* model) : Tracker(model) {
+            InverseCompositional(Model* model, double thresholdSumOfComposeDelta=0.5, int maxIteration=100) : Tracker(model) {
+                this->thresholdSumOfComposeDelta = thresholdSumOfComposeDelta;
+                this->maxIteration = maxIteration;
             }
             virtual ~InverseCompositional() {
             }
 
             virtual void initialize();
             virtual void track(const cv::Mat& image);
+            virtual std::vector<cv::Mat> getPoseTrace() const {
+                return this->poseTrace;
+            }
+            virtual std::string getLogString() const {
+                return instant::Utils::String::Format("iter:%d, delta:%.2f",
+                        this->iter, this->sumOfComposeDelta);
+            }
 
         protected:
-            virtual void calculateGradients(double scale=1.0/255.0);
+            virtual void calculateGradients(double scale=1.0);
             virtual void calculateSteepest();
             virtual void calculateHessianInv();
 
@@ -25,8 +36,14 @@ namespace Stick {
             cv::Mat steepest;
             cv::Mat hessianInv;
 
-            cv::Mat transformedImage;
             cv::Mat errorImage;
+
+            double sumOfComposeDelta;
+            int iter;
+
+            double thresholdSumOfComposeDelta;
+            int maxIteration;
+            std::vector<cv::Mat> poseTrace;
     };
 }
 

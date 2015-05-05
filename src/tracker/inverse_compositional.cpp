@@ -17,36 +17,44 @@ void InverseCompositional::track(const cv::Mat& image) {
     int height = this->templateImage.size().height;
     int params = this->model->getParameterSize();
 
-    cv::Mat pose = this->model->get();
-    pose.at<double>(cv::Point(2, 0)) += image.size().width/2 - width/2;
-    pose.at<double>(cv::Point(2, 1)) += image.size().height/2 - height/2;
+    this->poseTrace.clear();
+    for(int i=0; i<this->maxIteration; i++) {
+        this->getTransformedImage(image, this->templateImage.size());
+        for(int y=0; y<height; y++) {
+            for(int x=0; x<width; x++) {
+                cv::Point pt(x, y);
+                this->errorImage.at<double>(pt)
+                    = (double)this->transformedImage.at<unsigned char>(pt)
+                    - (double)this->templateImage.at<unsigned char>(pt);
+            }
+        }
+        cv::Mat reshapedError = this->errorImage.reshape(0, width*height);
 
-    cv::warpPerspective(image, this->transformedImage, pose.inv(), this->templateImage.size());
-    for(int y=0; y<height; y++) {
-        for(int x=0; x<width; x++) {
-            cv::Point pt(x, y);
-            this->errorImage.at<double>(pt)
-                = (double)this->transformedImage.at<unsigned char>(pt)
-                - (double)this->templateImage.at<unsigned char>(pt);
+        cv::Mat pose = this->model->get();
+        cv::Mat delta = this->hessianInv * (this->steepest * reshapedError);
+        cv::Mat deltaPose = cv::Mat::eye(pose.size(), cv::DataType<double>::type);
+        for(int i=0; i<delta.size().area(); i++) {
+            deltaPose.at<double>(i) += delta.at<double>(i);
+        }
+
+        this->model->set(deltaPose);
+        cv::Mat deltaInv = this->model->inverse();
+
+        this->model->set(pose);
+        this->model->compose(deltaInv);
+        this->poseTrace.push_back(this->model->get());
+
+        double sumOfComposeDelta = -2.0;
+        for(int p=0; p<params; p++) {
+            sumOfComposeDelta += std::abs(deltaInv.at<double>(p));
+        }
+       
+        this->iter = i;
+        this->sumOfComposeDelta = sumOfComposeDelta;
+        if( sumOfComposeDelta < this->thresholdSumOfComposeDelta ) {
+            break;
         }
     }
-    cv::Mat reshapedError = this->errorImage.reshape(0, width*height);
-
-    cv::Mat delta = this->hessianInv * (this->steepest * reshapedError);
-    cv::Mat deltaPose = cv::Mat::eye(pose.size(), cv::DataType<double>::type);
-    for(int i=0; i<delta.size().area(); i++) {
-        deltaPose.at<double>(i) += delta.at<double>(i);
-    }
-
-    this->model->set(deltaPose);
-    cv::Mat deltaInv = this->model->inverse();
-
-    this->model->set(pose);
-    this->model->compose(deltaInv);
-
-    std::cout << deltaPose << std::endl;
-    std::cout << deltaInv << std::endl;
-    std::cout << this->model->get() << std::endl;
 }
 
 void InverseCompositional::calculateGradients(double scale){
