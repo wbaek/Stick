@@ -41,14 +41,14 @@ namespace Stick {
                 out.at<double>(0, 0) = in.at<double>(0) / z;
                 out.at<double>(0, 1) = in.at<double>(1) / z;
                 out.at<double>(0, 2) = in.at<double>(2) / z;
-                out.at<double>(0, 6) = - in.at<double>(0) * prime.at<double>(0);
-                out.at<double>(0, 7) = - in.at<double>(1) * prime.at<double>(0);
+                out.at<double>(0, 6) = - in.at<double>(0) * prime.at<double>(0) / (z * z);
+                out.at<double>(0, 7) = - in.at<double>(1) * prime.at<double>(0) / (z * z);
 
                 out.at<double>(1, 3) = in.at<double>(0) / z;
                 out.at<double>(1, 4) = in.at<double>(1) / z;
                 out.at<double>(1, 5) = in.at<double>(2) / z;
-                out.at<double>(1, 6) = - in.at<double>(0) * prime.at<double>(1);
-                out.at<double>(1, 7) = - in.at<double>(1) * prime.at<double>(1);
+                out.at<double>(1, 6) = - in.at<double>(0) * prime.at<double>(1) / (z * z);
+                out.at<double>(1, 7) = - in.at<double>(1) * prime.at<double>(1) / (z * z);
 
                 return out;
             }

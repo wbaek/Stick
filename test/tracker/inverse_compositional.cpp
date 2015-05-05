@@ -48,7 +48,7 @@ TEST(InverseCompositional, calculate_gradient) {
 
     cv::Mat image = cv::imread("datas/im000.png", CV_LOAD_IMAGE_GRAYSCALE);
 
-    tracker.setTemplate( image );
+    tracker.setTemplateImage( image );
     tracker.calculateGradients();
 
     cv::Mat gradients = tracker.getGradients();
@@ -63,7 +63,7 @@ TEST(InverseCompositional, calculate_steepest) {
 
     cv::Mat image = cv::imread("datas/im000.png", CV_LOAD_IMAGE_GRAYSCALE);
 
-    tracker.setTemplate( image );
+    tracker.setTemplateImage( image );
     tracker.calculateGradients();
     tracker.calculateSteepest();
 
@@ -79,7 +79,7 @@ TEST(InverseCompositional, calculate_hessian_inv) {
 
     cv::Mat image = cv::imread("datas/im000.png", CV_LOAD_IMAGE_GRAYSCALE);
 
-    tracker.setTemplate( image );
+    tracker.setTemplateImage( image );
     tracker.calculateGradients();
     tracker.calculateSteepest();
     tracker.calculateHessianInv();
@@ -93,7 +93,7 @@ TEST(InverseCompositional, calculate_track) {
 
     cv::Mat templateImage = cv::imread("datas/im000.png", CV_LOAD_IMAGE_GRAYSCALE);
 
-    tracker.setTemplate( templateImage );
+    tracker.setTemplateImage( templateImage );
     tracker.initialize();
 
     cv::Mat image = cv::imread("datas/im001_original.jpg", CV_LOAD_IMAGE_GRAYSCALE);

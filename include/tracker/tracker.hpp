@@ -25,16 +25,16 @@ namespace Stick {
                 return instant::Utils::String::Replace(className, "Stick::", "");
             }
 
-            void setTemplate(const cv::Mat& image) {
+            void setTemplateImage(const cv::Mat& image) {
                 if(image.channels() != 1) {
                     throw MakeClassException(InvalidParameters, "template image must be a single channel");
                 }
                 image.copyTo( this->templateImage );
             }
-            const cv::Mat getTemplate() const {
+            const cv::Mat getTemplateImage() const {
                 return this->templateImage.clone();
             }
-            const cv::Mat getTransformedImage(const cv::Mat& image, const cv::Size& templateSize) {
+            const void calculateTransformedImage(const cv::Mat& image, const cv::Size& templateSize) {
                 int dx = image.size().width/2 - templateSize.width/2;
                 int dy = image.size().height/2 - templateSize.height/2;
 
@@ -43,6 +43,8 @@ namespace Stick {
                 pose.at<double>(cv::Point(2, 1)) += dy;
 
                 cv::warpPerspective(image, this->transformedImage, pose.inv(), templateSize);
+            }
+            const cv::Mat getTransformedImage() const {
                 return this->transformedImage.clone();
             }
 
@@ -51,7 +53,7 @@ namespace Stick {
             }
 
             virtual void initialize() = 0;
-            virtual void track(const cv::Mat& image) = 0;
+            virtual void track(const cv::Mat& image, const double scale) = 0;
             virtual std::vector<cv::Mat> getPoseTrace() const = 0;
             virtual std::string getLogString() const = 0;
 

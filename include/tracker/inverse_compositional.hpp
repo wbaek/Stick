@@ -17,13 +17,17 @@ namespace Stick {
             }
 
             virtual void initialize();
-            virtual void track(const cv::Mat& image);
+            virtual void track(const cv::Mat& image, const double scale=1.0);
             virtual std::vector<cv::Mat> getPoseTrace() const {
                 return this->poseTrace;
             }
             virtual std::string getLogString() const {
                 return instant::Utils::String::Format("iter:%d, delta:%.2f",
                         this->iter, this->sumOfComposeDelta);
+            }
+
+            virtual cv::Mat getErrorImage() const {
+                return this->errorImage.clone();
             }
 
         protected:

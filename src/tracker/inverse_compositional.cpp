@@ -12,20 +12,20 @@ void InverseCompositional::initialize() {
     this->errorImage = cv::Mat::zeros(this->templateImage.size(), cv::DataType<double>::type);
 }
 
-void InverseCompositional::track(const cv::Mat& image) {
+void InverseCompositional::track(const cv::Mat& image, const double scale) {
     int width = this->templateImage.size().width;
     int height = this->templateImage.size().height;
     int params = this->model->getParameterSize();
 
     this->poseTrace.clear();
     for(int i=0; i<this->maxIteration; i++) {
-        this->getTransformedImage(image, this->templateImage.size());
+        this->calculateTransformedImage(image, this->templateImage.size());
         for(int y=0; y<height; y++) {
             for(int x=0; x<width; x++) {
                 cv::Point pt(x, y);
                 this->errorImage.at<double>(pt)
-                    = (double)this->transformedImage.at<unsigned char>(pt)
-                    - (double)this->templateImage.at<unsigned char>(pt);
+                    = ((double)this->transformedImage.at<unsigned char>(pt)
+                    - (double)this->templateImage.at<unsigned char>(pt)) * scale;
             }
         }
         cv::Mat reshapedError = this->errorImage.reshape(0, width*height);
